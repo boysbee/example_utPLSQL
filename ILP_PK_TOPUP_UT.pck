@@ -116,7 +116,7 @@ create or replace package body ILP_PK_TOPUP_UT is
   mFailCntID           NUMBER := -4003;
   mFailPolDParamId     NUMBER := -4005;
   mFailReqID           NUMBER := -4006;
-  mFailPolDParamVal VARCHAR2(4000) := '<?xml version="1.0" encoding="UTF-16"?>
+  mFailPolDParamVal    VARCHAR2(4000) := '<?xml version="1.0" encoding="UTF-16"?>
 <ROWSET>
    <ROW>
       <APPLICATION_ID>99999999</APPLICATION_ID>
@@ -213,11 +213,11 @@ create or replace package body ILP_PK_TOPUP_UT is
     PARAM_NAME,PARAM_VALUE) values 
     (-9998, :mFailProcessId,''CONTRACT_ID'',:mFailCntId)'
       USING mFailProcessId, mFailCntId;
-      EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM(PARAM_ID,PROCESS_ID,
+    EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM(PARAM_ID,PROCESS_ID,
     PARAM_NAME,PARAM_VALUE) values 
     (-9999, :mFailProcessId,''REQUEST_ID'',:mFailReqID)'
       USING mFailProcessId, mFailReqID;
-      
+  
     EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM(PARAM_ID,PROCESS_ID,
     PARAM_NAME,PARAM_VALUE) values 
     (-10000, :mFailProcessId,''POL_DETAIL'',:mFailPolDParamVal)'
@@ -487,19 +487,7 @@ create or replace package body ILP_PK_TOPUP_UT is
   PROCEDURE ut_saveTopup_fail IS
     policyDetailRow ILP_T_POL_DETAIL%ROWTYPE;
   BEGIN
-    utassert.isnotnull('It should found contract_id',
-                       'ilp_pk_topup.getContractId(' || mFailProcessId || ')');
-    utassert.isnotnull('It should found request_id',
-                       'ilp_pk_topup.getRequestId(' || mFailProcessId || ')');
-    policyDetailRow := ilp_pk_topup.getPolicyDetailRow(mFailProcessId,
-                                                       mFailCntID);
   
-    utassert.isnotnull('It should found policy_detail_row',
-                       'ilp_pk_topup.getPolicyDetailRow(' || mFailProcessId || ',' ||
-                       mFailCntID || ')');
-    utassert.isnotnull('It should found prem_allc',
-                       'ilp_pk_topup.getPolicyPremAllocList(' ||
-                       mFailProcessId || ',' || mFailCntID || ')');
     -- Test expect result -1 is fail.  
     utAssert.eq('It should return -1 when ilp_pk_topup.saveTopup was failed.',
                 ilp_pk_topup.saveTopup(mFailProcessId, mUpdateUser),
