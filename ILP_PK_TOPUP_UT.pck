@@ -32,7 +32,7 @@ create or replace package ILP_PK_TOPUP_UT is
   -- ilp_pk_topup.saveTopup it should return 2 when not found premium_allocate by process_id.
   PROCEDURE ut_saveTopup_premAllc_notFound;
   -- ilp_pk_topup.saveTopup it should fail when error list more then 1 error.
-  --PROCEDURE ut_saveTopup_fail;
+  PROCEDURE ut_saveTopup_fail;
 
   -- test save data into ilp_t_pol_detail.
   PROCEDURE ut_savePolPremAlloc;
@@ -202,7 +202,6 @@ create or replace package body ILP_PK_TOPUP_UT is
         contract_id                | fail
     
     */
-  
     execute immediate 'insert into ilp_t_process_subscribe 
     (PROCESS_ID, FUNC_CODE, CREATE_USER, CREATE_DATE, START_DATE, FINISH_DATE, 
     PROCESS_TYPE, PROCESS_STATUS, PROCESS_RESULT, EXECUTE_USER)
@@ -223,14 +222,12 @@ create or replace package body ILP_PK_TOPUP_UT is
     PARAM_NAME,PARAM_VALUE) values 
     (10000, :mFailProcessId,''POL_PREM_ALLOC'',:mFailPrmAllcVal)'
       USING mFailProcessId, mFailPrmAllcVal;
+   
   
-    execute immediate 'insert into ilp_t_process_subscribe 
-    (PROCESS_ID, FUNC_CODE, CREATE_USER, CREATE_DATE, START_DATE, FINISH_DATE, 
-    PROCESS_TYPE, PROCESS_STATUS, PROCESS_RESULT, EXECUTE_USER)
-    values (:mNotFoundPremAllc, ''SAVE_TOPUP'', ''asdfsaf'', 
-    sysdate, sysdate, sysdate, ''N'', ''N'', 1, ''asdfsaf'')'
-      USING mPIDNotFoundPremAllc;
-  
+    /* end mock case fail */
+  end;
+  procedure mock_notfound_case is
+  begin
     -- set fail case CONTRACT_ID
     EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM(PARAM_ID,PROCESS_ID,
     PARAM_NAME,PARAM_VALUE) values 
@@ -241,13 +238,14 @@ create or replace package body ILP_PK_TOPUP_UT is
     (PARAM_ID,PROCESS_ID,PARAM_NAME,PARAM_VALUE) values 
     (90022, :mNotFoundPremAllc,''POL_DETAIL'',:mFailPremAllocPolDParamVal)'
       USING mPIDNotFoundPremAllc, mFailPolDParamVal;
-  
-    EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM
-    (PARAM_ID,PROCESS_ID,PARAM_NAME,PARAM_VALUE) values 
-    (90023, :mFailProcessId,''POL_PREM_ALLOC'',:mFailPrmAllcVal)'
-      USING mFailProcessId, mFailPrmAllcVal;
-    /* end mock case fail */
+    execute immediate 'insert into ilp_t_process_subscribe 
+    (PROCESS_ID, FUNC_CODE, CREATE_USER, CREATE_DATE, START_DATE, FINISH_DATE, 
+    PROCESS_TYPE, PROCESS_STATUS, PROCESS_RESULT, EXECUTE_USER)
+    values (:mNotFoundPremAllc, ''SAVE_TOPUP'', ''asdfsaf'', 
+    sysdate, sysdate, sysdate, ''N'', ''N'', 1, ''asdfsaf'')'
+      USING mPIDNotFoundPremAllc;
   end;
+
   procedure mock_validate_fail is
   
   begin
@@ -486,15 +484,7 @@ create or replace package body ILP_PK_TOPUP_UT is
   PROCEDURE ut_saveTopup_fail IS
   
   BEGIN
-    -- should found fail case.
-    utassert.eqqueryvalue('It should found fail case in ILP_T_PROCESS_SUBSCRIBE',
-                          'select count(*) as count from ILP_T_PROCESS_SUBSCRIBE where PROCESS_ID =' ||
-                          mFailProcessId,
-                          1);
-    utassert.eqqueryvalue('It should found data subscribe_param with fail case in ILP_T_PROCESS_SUBSCRIBE_PARAM',
-                          'select count(*) as count from ILP_T_PROCESS_SUBSCRIBE_PARAM where PROCESS_ID =' ||
-                          mFailProcessId,
-                          3);
+  
     -- Test expect result -1 is fail.  
     utAssert.eq('It should return -1 when ilp_pk_topup.saveTopup was failed.',
                 ilp_pk_topup.saveTopup(mFailProcessId, mUpdateUser),
