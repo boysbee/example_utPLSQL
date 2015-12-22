@@ -4,23 +4,26 @@ CREATE OR REPLACE PACKAGE ILP_PK_TOPUP IS
   -- CREATED : 12/16/2015 15:15 PM
   -- PURPOSE : PACKAGE FOR ADD TOPUP INFORMATION
 
-  FUNCTION SAVETOPUP(PPROCESSID IN NUMBER) RETURN NUMBER;
-  FUNCTION GETPARAM(PPROCID IN NUMBER, PKEY IN VARCHAR2) RETURN VARCHAR2;
-  FUNCTION GETCONTRACTID(PPROCESSID IN NUMBER) RETURN VARCHAR2;
-  FUNCTION GETREQUESTID(PPROCESSID IN NUMBER) RETURN VARCHAR2;
+  FUNCTION saveTopup(PPROCESSID IN NUMBER, PUPDATEUSER IN VARCHAR2)
+    RETURN NUMBER;
+  FUNCTION getParam(PPROCID IN NUMBER, PKEY IN VARCHAR2) RETURN VARCHAR2;
+  FUNCTION getContractId(PPROCESSID IN NUMBER) RETURN VARCHAR2;
+  FUNCTION getRequestId(PPROCESSID IN NUMBER) RETURN VARCHAR2;
   FUNCTION getPolicyPremAllocList(pProcessId  IN NUMBER,
                                   pContractId IN NUMBER)
     RETURN ILP_PK_TYPE.ILP_T_POL_PREM_ALLOC_TABLE;
-  PROCEDURE SAVEPREMTOPOLDETAIL(PPROCESSID          IN NUMBER,
-                                PCONTRACTID         IN NUMBER,
-                                PREQUESTID          IN NUMBER,
-                                PAPPLICATIONID      IN NUMBER,
-                                PPOLICYNO           IN VARCHAR2,
-                                PAUTOREFLAG         IN VARCHAR2,
-                                PAUTOREMONTH        IN NUMBER,
-                                PDEDUCTDEVIDENDFUND IN VARCHAR2,
-                                PUPDATEUSER         IN VARCHAR2,
-                                PTOPUPAMOUNT        IN NUMBER);
+  FUNCTION getPolicyDetailRow(pProcessId IN NUMBER, pContractId IN NUMBER)
+    RETURN ILP_T_POL_DETAIL%ROWTYPE;
+  PROCEDURE savePremToPolDetail(pProcessId          in NUMBER,
+                                pContractId         in NUMBER,
+                                pRequestId          in NUMBER,
+                                pApplicationId      in NUMBER,
+                                pPolicyNo           in VARCHAR2,
+                                pAutoReFlag         in VARCHAR2,
+                                pAutoReMonth        in NUMBER,
+                                pDeductDevidendFund in VARCHAR2,
+                                pUpdateUser         in VARCHAR2,
+                                pTopupAmount        in NUMBER);
   PROCEDURE savePolPremAlloc(pProcessId        IN NUMBER,
                              pContractId       IN NUMBER,
                              pPolicyNo         IN VARCHAR2,
@@ -60,10 +63,29 @@ create or replace package body ILP_PK_TOPUP is
   END getPolicyDetailRow;
 
   FUNCTION getPolPreAllc(pProcessId IN NUMBER) return VARCHAR2 is
-  begin
-    return getParam(pProcessId, 'POL_PREM_ALLOC');
-  end;
+  BEGIN
+    RETURN getParam(pProcessId, 'POL_PREM_ALLOC');
+  END;
 
+  FUNCTION getPolicyPremAllocList(pProcessId  IN NUMBER,
+                                  pContractId IN NUMBER)
+    RETURN ILP_PK_TYPE.ILP_T_POL_PREM_ALLOC_TABLE IS
+  
+    lParamValue VARCHAR2(4000);
+    lFunc       varchar2(100) := 'ILP_PK_TOPUP.getPolicyPremAllocList';
+  
+  BEGIN
+  
+    az_pk0_general.logTrace(lFunc,
+                            0,
+                            'Process Id: ' || pProcessId ||
+                            ', ContractId: ' || pContractId);
+  
+    lParamValue := getPolPreAllc(pProcessId);
+    RETURN ILP_PK_XML_CONVERTER.GET_ILP_PREM_TABLE_FROM_XML(xmltype(lParamValue),
+                                                            pContractId);
+  
+  END getPolicyPremAllocList;
   FUNCTION isValueInRange(pValue    IN NUMBER,
                           pMinVAlue IN NUMBER,
                           pMaxValue IN NUMBER) RETURN BOOLEAN IS
@@ -93,6 +115,7 @@ create or replace package body ILP_PK_TOPUP is
                                NULL,
                                NULL);
       END IF;
+    
       sumAlloc := sumAlloc + pPremAllocList(i).percent_invest;
     END LOOP;
     if sumAlloc > 100 or sumAlloc < 0 then
@@ -101,7 +124,7 @@ create or replace package body ILP_PK_TOPUP is
                              'Fund percent allocated in TUP must between 0-100.(Current:' ||
                              sumAlloc || ')',
                              NULL,
-                             NULL);
+                             NULL);   
     
     end if;
   
@@ -109,26 +132,9 @@ create or replace package body ILP_PK_TOPUP is
       return false;
     end if;
     return true;
+  
+    return true;
   end;
-  FUNCTION getPolicyPremAllocList(pProcessId  IN NUMBER,
-                                  pContractId IN NUMBER)
-    RETURN ILP_PK_TYPE.ILP_T_POL_PREM_ALLOC_TABLE IS
-  
-    lParamValue VARCHAR2(4000);
-    lFunc       varchar2(100) := 'ILP_PK_TOPUP.getPolicyPremAllocList';
-  
-  BEGIN
-  
-    az_pk0_general.logTrace(lFunc,
-                            0,
-                            'Process Id: ' || pProcessId ||
-                            ', ContractId: ' || pContractId);
-  
-    lParamValue := getPolPreAllc(pProcessId);
-    RETURN ILP_PK_XML_CONVERTER.GET_ILP_PREM_TABLE_FROM_XML(xmltype(lParamValue),
-                                                            pContractId);
-  
-  END getPolicyPremAllocList;
 
   PROCEDURE savePremToPolDetail(pProcessId          in NUMBER,
                                 pContractId         in NUMBER,
@@ -171,20 +177,20 @@ create or replace package body ILP_PK_TOPUP is
        sysdate);
   end;
 
-  FUNCTION GETCONTRACTID(PPROCESSID IN NUMBER) RETURN VARCHAR2 IS
+  FUNCTION getContractId(pProcessId IN NUMBER) RETURN VARCHAR2 IS
   BEGIN
-    RETURN GETPARAM(PPROCESSID, 'CONTRACT_ID');
+    RETURN getParam(pProcessId, 'CONTRACT_ID');
   END;
-  FUNCTION GETREQUESTID(PPROCESSID IN NUMBER) RETURN VARCHAR2 IS
+  FUNCTION getRequestId(pProcessId IN NUMBER) RETURN VARCHAR2 IS
   BEGIN
-    RETURN GETPARAM(PPROCESSID, 'REQUEST_ID');
+    RETURN getParam(pProcessId, 'REQUEST_ID');
   END;
 
   PROCEDURE insertPolPremAlloc(pProcessId        IN NUMBER,
                                pContractId       IN NUMBER,
                                pPolPremAllocList ILP_PK_TYPE.ILP_T_POL_PREM_ALLOC_TABLE) IS
   
-    lFunc VARCHAR2(50) := 'ILP_PK_POLICY_REFER.insertPolPremAlloc';
+    lFunc VARCHAR2(50) := 'ILP_PK_TOPUP.insertPolPremAlloc';
   BEGIN
     az_pk0_general.logTrace(lFunc,
                             pContractId,
@@ -242,7 +248,7 @@ create or replace package body ILP_PK_TOPUP is
                                     pUpdateUser       IN VARCHAR2) IS
   
     lCurDate DATE := sysdate;
-    lFunc    VARCHAR2(50) := 'ILP_PK_POLICY_REFER.preparePolPremAllocList';
+    lFunc    VARCHAR2(50) := 'ILP_PK_TOPUP.preparePolPremAllocList';
   
   BEGIN
   
@@ -263,6 +269,18 @@ create or replace package body ILP_PK_TOPUP is
       pPolPremAllocList(i).update_user := pUpdateUser;
       pPolPremAllocList(i).update_date := lCurDate;
     END LOOP;
+  
+  END;
+  PROCEDURE deletePolPremAlloc(pContractId IN NUMBER) IS
+  
+    lFunc VARCHAR2(50) := 'ILP_PK_TOPUP.deletePolPremAlloc';
+  
+  BEGIN
+    az_pk0_general.logTrace(lFunc, pContractId, '');
+  
+    DELETE FROM ILP_T_POL_PREM_ALLOC t
+     WHERE t.Contract_Id = pContractId
+       AND t.application_id IS NOT NULL;
   
   END;
   PROCEDURE savePolPremAlloc(pProcessId        IN NUMBER,
@@ -289,11 +307,12 @@ create or replace package body ILP_PK_TOPUP is
                             pApplicationId,
                             pPolPremAllocList,
                             pUpdateUser);
-    --deletePolPremAlloc(pContractId);
+    deletePolPremAlloc(pContractId);
     insertPolPremAlloc(pProcessId, pContractId, pPolPremAllocList);
   
   END;
-  FUNCTION saveTopup(pProcessId in number) RETURN NUMBER is
+  FUNCTION saveTopup(pProcessId in number, pUpdateUser in VARCHAR2)
+    RETURN NUMBER is
     lContractId       VARCHAR2(200);
     lRequestId        VARCHAR2(200);
     lPolicyDetailRow  ILP_T_POL_DETAIL%ROWTYPE;
@@ -309,8 +328,9 @@ create or replace package body ILP_PK_TOPUP is
   
     lContractId := getContractId(pProcessId);
   
-    lRequestId        := getRequestId(pProcessId);
-    lPolicyDetailRow  := getPolicyDetailRow(pProcessId, lContractId);
+    lRequestId       := getRequestId(pProcessId);
+    lPolicyDetailRow := getPolicyDetailRow(pProcessId, lContractId);
+  
     lPolPremAllocList := getPolicyPremAllocList(pProcessId, lContractId);
   
     savePremToPolDetail(pProcessId,
@@ -321,8 +341,14 @@ create or replace package body ILP_PK_TOPUP is
                         lPolicyDetailRow.Auto_Rebalance_Flag,
                         lPolicyDetailRow.Auto_Rebalance_Month,
                         lPolicyDetailRow.Deduct_Dividend_Fund,
-                        'customer',
+                        pUpdateUser,
                         0);
+    savePolPremAlloc(pProcessId,
+                     lContractId,
+                     lPolicyDetailRow.Policy_No,
+                     lPolicyDetailRow.Application_Id,
+                     lPolPremAllocList,
+                     pUpdateUser);
   
     IF lErrors.count > 0 THEN
       ilp_pk_process.addErrorsToTable(pProcessId, lErrors);

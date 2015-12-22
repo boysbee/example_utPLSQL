@@ -17,6 +17,9 @@ create or replace package ILP_PK_TOPUP_UT is
   -- test get data policy_prem_alloc.
   PROCEDURE ut_getPolicyPremAllocList;
 
+  -- test get getPolPreAllc xml from subscribe_param.
+  PROCEDURE ut_getPoldetail;
+
   -- test ilp_pk_topup.saveTopup success it should return value is 0.
   PROCEDURE ut_saveTopup_pass;
   -- test save data to ilp_t_pol_detail.
@@ -29,7 +32,7 @@ create or replace package ILP_PK_TOPUP_UT is
   -- ilp_pk_topup.saveTopup it should return 2 when not found premium_allocate by process_id.
   PROCEDURE ut_saveTopup_premAllc_notFound;
   -- ilp_pk_topup.saveTopup it should fail when error list more then 1 error.
-  PROCEDURE ut_saveTopup_fail;
+  --PROCEDURE ut_saveTopup_fail;
 
   -- test save data into ilp_t_pol_detail.
   PROCEDURE ut_savePolPremAlloc;
@@ -37,35 +40,36 @@ create or replace package ILP_PK_TOPUP_UT is
   -- test validate success premium amount;
   PROCEDURE ut_validatePremiumAmount_succ;
   -- test validate fail  premium amount;
-  PROCEDURE ut_validatePremiumAmount_fail;
+  PROCEDURE ut_validatePrmAmount_fail;
   -- Call all test
-  PROCEDURE TEST;
+  PROCEDURE test;
 
 end ILP_PK_TOPUP_UT;
 /
 create or replace package body ILP_PK_TOPUP_UT is
-  mNotFoundProcId INTEGER := 9000;
-  mNotFoundPolD   INTEGER := 9001;
+  mUpdateUser     CONSTANT VARCHAR2(10) := 'unittest';
+  mNotFoundProcId CONSTANT INTEGER := 9000;
+  mNotFoundPolD   CONSTANT INTEGER := 9001;
 
-  mSuccProcId        INTEGER := 9999;
-  mSuccParamId       INTEGER := 9999;
-  mSuccPolDParamId   INTEGER := 10000;
-  mSuccPolPrmParamId INTEGER := 10001;
-  mSuccReqParamId    INTEGER := 10002;
+  mSuccProcId        CONSTANT INTEGER := 9999;
+  mSuccParamId       CONSTANT INTEGER := 9999;
+  mSuccPolDParamId   CONSTANT INTEGER := 10000;
+  mSuccPolPrmParamId CONSTANT INTEGER := 10001;
+  mSuccReqParamId    CONSTANT INTEGER := 10002;
 
-  mSuccCntIDParamName   VARCHAR2(20) := 'CONTRACT_ID';
-  mSuccReqIDParamName   VARCHAR2(20) := 'REQUEST_ID';
-  mSuccPolDParamName    VARCHAR2(20) := 'POL_DETAIL';
-  mSuccPrmAllcParamName VARCHAR2(20) := 'POL_PREM_ALLOC';
-  mSuccCntIDParamVal    VARCHAR2(100) := '9999999';
+  cntIDParamName     CONSTANT VARCHAR2(20) := 'CONTRACT_ID';
+  reqIDParamName     CONSTANT VARCHAR2(20) := 'REQUEST_ID';
+  polDParamName      CONSTANT VARCHAR2(20) := 'POL_DETAIL';
+  prmAllcParamName   CONSTANT VARCHAR2(20) := 'POL_PREM_ALLOC';
+  mSuccCntIDParamVal CONSTANT VARCHAR2(100) := '9999999';
 
-  mSuccReqIDParamVal VARCHAR2(100) := '9999999';
+  mSuccReqIDParamVal CONSTANT VARCHAR2(100) := '9999999';
 
-  mSuccPrmAllcVal VARCHAR2(4000) := '<?xml version="1.0" encoding="UTF-16"?>
+  mSuccPrmAllcVal CONSTANT VARCHAR2(4000) := '<?xml version="1.0" encoding="UTF-16"?>
 <ROWSET>
           <ROW>
       <CONTRACT_ID>9999999</CONTRACT_ID>
-      <APPLICATION_ID>1342900</APPLICATION_ID>
+      <APPLICATION_ID>99999999</APPLICATION_ID>
       <PREMIUM_TYPE>TUP</PREMIUM_TYPE>
       <FUND_ID>2</FUND_ID>
       <SEQ>1</SEQ>
@@ -73,7 +77,7 @@ create or replace package body ILP_PK_TOPUP_UT is
    </ROW>   
    <ROW>
       <CONTRACT_ID>9999999</CONTRACT_ID>
-      <APPLICATION_ID>1342900</APPLICATION_ID>
+      <APPLICATION_ID>99999999</APPLICATION_ID>
       <PREMIUM_TYPE>TUP</PREMIUM_TYPE>
       <FUND_ID>5</FUND_ID>
       <SEQ>2</SEQ>
@@ -81,7 +85,7 @@ create or replace package body ILP_PK_TOPUP_UT is
    </ROW>
    <ROW>
       <CONTRACT_ID>9999999</CONTRACT_ID>
-      <APPLICATION_ID>1342900</APPLICATION_ID>
+      <APPLICATION_ID>99999999</APPLICATION_ID>
       <PREMIUM_TYPE>TUP</PREMIUM_TYPE>
       <FUND_ID>9</FUND_ID>
       <SEQ>3</SEQ>
@@ -92,31 +96,27 @@ create or replace package body ILP_PK_TOPUP_UT is
   mSuccPolDParamVal VARCHAR2(4000) := '<?xml version="1.0" encoding="UTF-16"?>
 <ROWSET>
    <ROW>
-      <APPLICATION_ID>1342900</APPLICATION_ID>
+      <APPLICATION_ID>99999999</APPLICATION_ID>
       <AUTO_REBALANCE_FLAG>Y</AUTO_REBALANCE_FLAG>
       <AUTO_REBALANCE_MONTH>6</AUTO_REBALANCE_MONTH>
       <DEDUCT_DIVIDEND_FUND>Y</DEDUCT_DIVIDEND_FUND>
       <POLICY_NO>9999999999</POLICY_NO>
       <CONTRACT_ID>9999999</CONTRACT_ID>
    </ROW>
-    <ROW>
-        <APPLICATION_ID>99999999</APPLICATION_ID>
-        <Autorebalanceflag>Y</Autorebalanceflag>
-        <Autorebalancemonth>6</Autorebalancemonth>
-        <Deductdividendfund>Y</Deductdividendfund>
-        <POLICY_NO>9999999999</PolicyNo>
-        <CONTRACT_ID>9999999</CONTRACT_ID>
-    </ROW>
 </ROWSET>';
 
-  mFailProcessId INTEGER := 9998;
-  mFailParamId   INTEGER := 9998;
-  mFailParamName VARCHAR2(20) := 'CONTRACT_ID';
+  mFailProcessId   INTEGER := 9998;
+  mFailValidProcId INTEGER := -4000;
+  mFailParamId     INTEGER := 9998;
 
-  mFailCntId           VARCHAR2(100) := '1000000';
   mPIDNotFoundPremAllc INTEGER := 9002;
 
-  mFailPremAllocPolDParamVal VARCHAR2(4000) := '<?xml version="1.0" encoding="UTF-16"?>
+  mFailPrmAllcValidPid NUMBER := -4001;
+  mFailCntValidPid     NUMBER := -4002;
+  mFailCntID           NUMBER := -4003;
+  mFailPolDParamId     NUMBER := -4005;
+
+  mFailPolDParamVal VARCHAR2(4000) := '<?xml version="1.0" encoding="UTF-16"?>
 <ROWSET>
    <ROW>
       <APPLICATION_ID>99999999</APPLICATION_ID>
@@ -136,7 +136,7 @@ create or replace package body ILP_PK_TOPUP_UT is
       <PREMIUM_TYPE>TUP</PREMIUM_TYPE>
       <FUND_ID>2</FUND_ID>
       <SEQ>1</SEQ>
-      <PERCENT_INVEST>70</PERCENT_INVEST>
+      <PERCENT_INVEST>40</PERCENT_INVEST>
    </ROW>   
    <ROW>
       <CONTRACT_ID>1000000</CONTRACT_ID>
@@ -144,7 +144,7 @@ create or replace package body ILP_PK_TOPUP_UT is
       <PREMIUM_TYPE>TUP</PREMIUM_TYPE>
       <FUND_ID>5</FUND_ID>
       <SEQ>2</SEQ>
-      <PERCENT_INVEST>30</PERCENT_INVEST>
+      <PERCENT_INVEST>20</PERCENT_INVEST>
    </ROW>
    <ROW>
       <CONTRACT_ID>1000000</CONTRACT_ID>
@@ -155,13 +155,9 @@ create or replace package body ILP_PK_TOPUP_UT is
       <PERCENT_INVEST>70</PERCENT_INVEST>
    </ROW>   
 </ROWSET>';
-  /*  --------------------------------------------------
-       UT_SETUP : setup the test data here. This is first
-                  procedure gets saveTopupd automatically
-  ----------------------------------------------------- */
-  PROCEDURE ut_setup IS
-  BEGIN
-    ut_teardown; -- delete mock data
+
+  procedure mock_success_case is
+  begin
     /* 
       start mock cass all success
         ilp_t_process_subscribe | true
@@ -175,28 +171,32 @@ create or replace package body ILP_PK_TOPUP_UT is
     values (:mSuccProcId, ''SAVE_TOPUP'', ''asdfsaf'', 
     sysdate, sysdate, sysdate, ''N'', ''N'', 1, ''asdfsaf'')'
       USING mSuccProcId;
+    -- success case set CONTRACT_ID
+    EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM(PARAM_ID,PROCESS_ID,
+    PARAM_NAME,PARAM_VALUE) values 
+    (:mSuccParamId, :mSuccProcId,''CONTRACT_ID'',:mSuccCntIDParamVal)'
+      USING mSuccParamId, mSuccProcId, mSuccCntIDParamVal;
   
     EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM(PARAM_ID,PROCESS_ID,
     PARAM_NAME,PARAM_VALUE) values 
-    (:mSuccParamId, :mSuccProcId,:mSuccCntIDParamName,:mSuccCntIDParamVal)'
-      USING mSuccParamId, mSuccProcId, mSuccCntIDParamName, mSuccCntIDParamVal;
+    (:mSuccParamId, :mSuccProcId,''REQUEST_ID'',:mSuccReqIDParamVal)'
+      USING mSuccReqParamId, mSuccProcId, mSuccReqIDParamVal;
   
     EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM(PARAM_ID,PROCESS_ID,
     PARAM_NAME,PARAM_VALUE) values 
-    (:mSuccPolDParamId, :mSuccProcId,:mSuccPolDParamName,:mSuccPolDParamVal)'
-      USING mSuccPolDParamId, mSuccProcId, mSuccPolDParamName, mSuccPolDParamVal;
+    (:mSuccPolDParamId, :mSuccProcId,''POL_DETAIL'',:mSuccPolDParamVal)'
+      USING mSuccPolDParamId, mSuccProcId, mSuccPolDParamVal;
   
     EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM(PARAM_ID,PROCESS_ID,
     PARAM_NAME,PARAM_VALUE) values 
-    (:mSuccPolPrmParamId, :mSuccProcId,:mSuccPrmAllcParamName,:mSuccPrmAllcVal)'
-      USING mSuccPolPrmParamId, mSuccProcId, mSuccPrmAllcParamName, mSuccPrmAllcVal;
+    (:mSuccPolPrmParamId, :mSuccProcId,''POL_PREM_ALLOC'',:mSuccPrmAllcVal)'
+      USING mSuccPolPrmParamId, mSuccProcId, mSuccPrmAllcVal;
   
-    EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM(PARAM_ID,PROCESS_ID,
-    PARAM_NAME,PARAM_VALUE) values 
-    (:mSuccParamId, :mSuccProcId,:mSuccReqIDParamName,:mSuccReqIDParamVal)'
-      USING mSuccReqParamId, mSuccProcId, mSuccReqIDParamName, mSuccReqIDParamVal;
     /* end mock case success */
-  
+  end;
+
+  procedure mock_fail_case is
+  begin
     /* start mock case fail 
        ilp_t_process_subscribe     | true
         contract_id                | fail
@@ -212,8 +212,17 @@ create or replace package body ILP_PK_TOPUP_UT is
   
     EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM(PARAM_ID,PROCESS_ID,
     PARAM_NAME,PARAM_VALUE) values 
-    (:mFailParamId, :mFailProcessId,:mFailParamName,:mFailCntId)'
-      USING mFailParamId, mFailProcessId, mFailParamName, mFailCntId;
+    (9998, :mFailProcessId,''CONTRACT_ID'',:mFailCntId)'
+      USING mFailProcessId, mFailCntId;
+  
+    EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM(PARAM_ID,PROCESS_ID,
+    PARAM_NAME,PARAM_VALUE) values 
+    (9999, :mFailProcessId,''POL_DETAIL'',:mFailPolDParamVal)'
+      USING mFailProcessId, mFailPolDParamVal;
+    EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM(PARAM_ID,PROCESS_ID,
+    PARAM_NAME,PARAM_VALUE) values 
+    (10000, :mFailProcessId,''POL_PREM_ALLOC'',:mFailPrmAllcVal)'
+      USING mFailProcessId, mFailPrmAllcVal;
   
     execute immediate 'insert into ilp_t_process_subscribe 
     (PROCESS_ID, FUNC_CODE, CREATE_USER, CREATE_DATE, START_DATE, FINISH_DATE, 
@@ -221,20 +230,57 @@ create or replace package body ILP_PK_TOPUP_UT is
     values (:mNotFoundPremAllc, ''SAVE_TOPUP'', ''asdfsaf'', 
     sysdate, sysdate, sysdate, ''N'', ''N'', 1, ''asdfsaf'')'
       USING mPIDNotFoundPremAllc;
+  
+    -- set fail case CONTRACT_ID
     EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM(PARAM_ID,PROCESS_ID,
     PARAM_NAME,PARAM_VALUE) values 
-    (:mFailPremAllocCase, :mNotFoundPremAllc,:mFailParamName,:mFailCntId)'
-      USING 90021, mPIDNotFoundPremAllc, mFailParamName, mFailCntId;
+    (90021, :mNotFoundPremAllc,''CONTRACT_ID'',:mFailCntId)'
+      USING mPIDNotFoundPremAllc, mFailCntId;
   
     EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM
     (PARAM_ID,PROCESS_ID,PARAM_NAME,PARAM_VALUE) values 
-    (:mFailPremAllocPolIdCase, :mNotFoundPremAllc,:mSuccPolDParamName,:mFailPremAllocPolDParamVal)'
-      USING 90022, mPIDNotFoundPremAllc, mSuccPolDParamName, mFailPremAllocPolDParamVal;
+    (90022, :mNotFoundPremAllc,''POL_DETAIL'',:mFailPremAllocPolDParamVal)'
+      USING mPIDNotFoundPremAllc, mFailPolDParamVal;
+  
     EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM
     (PARAM_ID,PROCESS_ID,PARAM_NAME,PARAM_VALUE) values 
     (90023, :mFailProcessId,''POL_PREM_ALLOC'',:mFailPrmAllcVal)'
       USING mFailProcessId, mFailPrmAllcVal;
     /* end mock case fail */
+  end;
+  procedure mock_validate_fail is
+  
+  begin
+    -- set mock databefore
+    execute immediate 'insert into ilp_t_process_subscribe 
+    (PROCESS_ID, FUNC_CODE, CREATE_USER, CREATE_DATE, START_DATE, FINISH_DATE, 
+    PROCESS_TYPE, PROCESS_STATUS, PROCESS_RESULT, EXECUTE_USER)
+    values (:mFailProcessId, ''SAVE_TOPUP'', ''asdfsaf'', 
+    sysdate, sysdate, sysdate, ''N'', ''N'', 1, ''asdfsaf'')'
+      USING mFailValidProcId;
+    EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM(PARAM_ID,PROCESS_ID,
+    PARAM_NAME,PARAM_VALUE) values 
+    (:mFailCntValidPid, :mFailValidProcId,''CONTRACT_ID'',:mFailCntID)'
+      USING mFailCntValidPid, mFailValidProcId, mFailCntID;
+    EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM(PARAM_ID,PROCESS_ID,
+    PARAM_NAME,PARAM_VALUE) values 
+    (:mFailPolDParamId, :mFailValidProcId,''POL_DETAIL'',:mFailPolDParamVal)'
+      USING mFailPolDParamId, mFailValidProcId, mFailPolDParamVal;
+    EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM(PARAM_ID,PROCESS_ID,
+    PARAM_NAME,PARAM_VALUE) values 
+    (:mFailPrmAllcValidPid, :mFailValidProcId,''POL_PREM_ALLOC'',:mFailPrmAllcVal)'
+      USING mFailPrmAllcValidPid, mFailValidProcId, mFailPrmAllcVal;
+  end;
+  /*  --------------------------------------------------
+       UT_SETUP : setup the test data here. This is first
+                  procedure gets saveTopupd automatically
+  ----------------------------------------------------- */
+  PROCEDURE ut_setup IS
+  BEGIN
+    ut_teardown; -- delete mock data
+    mock_success_case;
+    mock_fail_case;
+    mock_validate_fail;
   END;
 
   /*  --------------------------------------------------
@@ -246,25 +292,33 @@ create or replace package body ILP_PK_TOPUP_UT is
     -- delete mock success case
     EXECUTE IMMEDIATE 'delete from ILP_T_PROCESS_SUBSCRIBE_PARAM where PROCESS_ID = :mSuccProcId'
       USING mSuccProcId;
-    EXECUTE IMMEDIATE 'delete from ilp_t_process_subscribe where PROCESS_ID = :mSuccProcId'
+    EXECUTE IMMEDIATE 'delete from ILP_T_PROCESS_SUBSCRIBE where PROCESS_ID = :mSuccProcId'
       USING mSuccProcId;
   
     -- delete mock fail case
     EXECUTE IMMEDIATE 'delete from ILP_T_PROCESS_SUBSCRIBE_PARAM where PROCESS_ID = :mFailProcessId'
       USING mFailProcessId;
-    EXECUTE IMMEDIATE 'delete from ilp_t_process_subscribe where PROCESS_ID = :mFailProcessId'
+    EXECUTE IMMEDIATE 'delete from ILP_T_PROCESS_SUBSCRIBE where PROCESS_ID = :mFailProcessId'
       USING mFailProcessId;
     -- delete case not found in prem_alloc
     EXECUTE IMMEDIATE 'delete from ILP_T_PROCESS_SUBSCRIBE_PARAM where PROCESS_ID = :mNotFoundPremAllc'
       USING mPIDNotFoundPremAllc;
-    EXECUTE IMMEDIATE 'delete from ilp_t_process_subscribe where PROCESS_ID = :mNotFoundPremAllc'
+    EXECUTE IMMEDIATE 'delete from ILP_T_PROCESS_SUBSCRIBE where PROCESS_ID = :mNotFoundPremAllc'
       USING mPIDNotFoundPremAllc;
     -- delete mock data in ilp_t_pol_detail
-    execute IMMEDIATE 'delete from ilp_t_pol_detail where PROCESS_ID = :mSuccProcId'
+    execute IMMEDIATE 'delete from ILP_T_POL_DETAIL where PROCESS_ID = :mSuccProcId'
       USING mSuccProcId;
     -- clear mock data in ILP_T_POL_PREM_ALLOC
     execute IMMEDIATE 'delete from ILP_T_POL_PREM_ALLOC where PROCESS_ID = :mSuccProcId'
       USING mSuccProcId;
+    /* clear case validate fail */
+    EXECUTE IMMEDIATE 'delete from ILP_T_PROCESS_SUBSCRIBE_PARAM where PROCESS_ID = :mFailValidProcId'
+      USING mFailValidProcId;
+  
+    EXECUTE IMMEDIATE 'delete from ILP_T_PROCESS_SUBSCRIBE where PROCESS_ID = :mFailValidProcId'
+      USING mFailValidProcId;
+    /* end clear case validate fail */
+    commit;
   EXCEPTION
     WHEN OTHERS THEN
       NULL; -- Ignore if any errors. 
@@ -292,6 +346,16 @@ create or replace package body ILP_PK_TOPUP_UT is
                 pPolPremAllocList(1).premium_type,
                 'TUP');
   
+  end;
+
+  procedure ut_getPoldetail is
+    policyDetailRow ILP_T_POL_DETAIL%ROWTYPE;
+  begin
+    policyDetailRow := ilp_pk_topup.getPolicyDetailRow(mSuccProcId,
+                                                       mSuccCntIDParamVal);
+    utassert.eq('It should return row of poldetail',
+                policyDetailRow.policy_no,
+                '9999999999');
   end;
 
   /*  --------------------------------------------------
@@ -353,11 +417,16 @@ create or replace package body ILP_PK_TOPUP_UT is
     result number;
   BEGIN
   
-    result := ilp_pk_topup.saveTopup(mSuccProcId);
+    result := ilp_pk_topup.saveTopup(mSuccProcId, mUpdateUser);
+    --utassert.eq('It should return 0 when saveTopup pass', result, 0);
     utassert.eqqueryvalue('Save Topup should insert data into table ilp_t_pol_detail',
                           'select contract_id from ilp_t_pol_detail where process_id =' ||
                           mSuccProcId,
                           mSuccCntIDParamVal);
+    utassert.eqqueryvalue('It should count data equals topup list size when insert to ILP_T_POL_PREM_ALLOC',
+                          'select count(*) from ILP_T_POL_PREM_ALLOC where process_id =' ||
+                          mSuccProcId,
+                          3);
   END;
   /*  --------------------------------------------------
                    PROCEDURE saveTopup (
@@ -370,9 +439,9 @@ create or replace package body ILP_PK_TOPUP_UT is
   
   BEGIN
   
-    -- We expect result 2 is data not found.
+    -- Test expect result 2 is data not found.
     utAssert.eq('It should return 2 when we use ilp_pk_topup.saveTopup but not found contractid when pass processid it should return value is 2',
-                ilp_pk_topup.saveTopup(mNotFoundProcId),
+                ilp_pk_topup.saveTopup(mNotFoundProcId, mUpdateUser),
                 2);
   END;
   /*  --------------------------------------------------
@@ -388,7 +457,7 @@ create or replace package body ILP_PK_TOPUP_UT is
   
     -- Test expect return 2(fail) not found policy_detail.
     utAssert.eq('It should return 2 when we use ilp_pk_topup.saveTopup but not found data policy_detail when pass processid.',
-                ilp_pk_topup.saveTopup(mNotFoundProcId),
+                ilp_pk_topup.saveTopup(mNotFoundProcId, mUpdateUser),
                 2);
   END;
   /*  --------------------------------------------------
@@ -402,9 +471,9 @@ create or replace package body ILP_PK_TOPUP_UT is
   
   BEGIN
   
-    -- We expect result 2 is premium_allocate data not found.
+    -- Test expect result 2 is premium_allocate data not found.
     utAssert.eq('It should return 2 when call ilp_pk_topup.saveTopup but not found data premium_allocate when pass processid.',
-                ilp_pk_topup.saveTopup(mPIDNotFoundPremAllc),
+                ilp_pk_topup.saveTopup(mPIDNotFoundPremAllc, mUpdateUser),
                 2);
   END;
   /*  --------------------------------------------------
@@ -417,10 +486,18 @@ create or replace package body ILP_PK_TOPUP_UT is
   PROCEDURE ut_saveTopup_fail IS
   
   BEGIN
-  
-    -- We expect result -1 is fail.  
+    -- should found fail case.
+    utassert.eqqueryvalue('It should found fail case in ILP_T_PROCESS_SUBSCRIBE',
+                          'select count(*) as count from ILP_T_PROCESS_SUBSCRIBE where PROCESS_ID =' ||
+                          mFailProcessId,
+                          1);
+    utassert.eqqueryvalue('It should found data subscribe_param with fail case in ILP_T_PROCESS_SUBSCRIBE_PARAM',
+                          'select count(*) as count from ILP_T_PROCESS_SUBSCRIBE_PARAM where PROCESS_ID =' ||
+                          mFailProcessId,
+                          3);
+    -- Test expect result -1 is fail.  
     utAssert.eq('It should return -1 when ilp_pk_topup.saveTopup was failed.',
-                ilp_pk_topup.saveTopup(mFailProcessId),
+                ilp_pk_topup.saveTopup(mFailProcessId, mUpdateUser),
                 -1);
   END;
 
@@ -439,7 +516,7 @@ create or replace package body ILP_PK_TOPUP_UT is
     -- Test expect result :mSuccCntIDParamVal when we use ilp_pk_topup.getParam(:mSuccProcId,mSuccCntIDParamName).
     utAssert.eq('It should return value : ' || mSuccCntIDParamVal ||
                 ' when ilp_pk_topup.getParam.',
-                ilp_pk_topup.getParam(mSuccProcId, mSuccCntIDParamName),
+                ilp_pk_topup.getParam(mSuccProcId, cntIDParamName),
                 mSuccCntIDParamVal);
   END;
   /*  --------------------------------------------------
@@ -518,27 +595,28 @@ create or replace package body ILP_PK_TOPUP_UT is
                                                 pPolPremAllocList),
                 true);
   end;
-  /*
-  PROCEDURE : validatePremAmount
-    
-   Assertion methods used : EQ
-  */
-  procedure ut_validatePremiumAmount_fail is
+
+  procedure ut_validatePrmAmount_fail is
     pPolPremAllocList ILP_PK_TYPE.ILP_T_POL_PREM_ALLOC_TABLE;
+  
+    expect boolean := false;
+    actual boolean;
   begin
-    -- get fake fail data for policy_premium_alloc.
-    pPolPremAllocList := ilp_pk_topup.getPolicyPremAllocList(mFailProcessId,
-                                                             mFailCntId);
+  
+    pPolPremAllocList := ilp_pk_topup.getPolicyPremAllocList(mFailValidProcId,
+                                                             mFailCntID);
     -- Test expect return false when validatePreAmount becuase sum of premium over 100%.
-    utassert.eq('It should false return when validate all premiun amount should over 100 percentage.',
-                ilp_pk_topup.validatePremAmount(mFailProcessId,
+    utassert.eq('It should validate all premiun amount should not over 100 percentage.',
+                ilp_pk_topup.validatePremAmount(mFailCntID,
                                                 pPolPremAllocList),
                 false);
+  
   end;
 
-  PROCEDURE TEST IS
+  PROCEDURE test IS
   BEGIN
     utplsql.run('ILP_PK_TOPUP_UT');
   END;
+
 end ILP_PK_TOPUP_UT;
 /
