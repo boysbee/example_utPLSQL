@@ -31,9 +31,9 @@ CREATE OR REPLACE PACKAGE ILP_PK_TOPUP IS
                              pPolPremAllocList IN OUT ILP_PK_TYPE.ILP_T_POL_PREM_ALLOC_TABLE,
                              pUpdateUser       IN VARCHAR2);
   FUNCTION getPolPreAllc(pProcessId IN NUMBER) return VARCHAR2;
-  FUNCTION validatePremAmount(pContractId    IN VARCHAR2,
-                              pPremAllocList IN ILP_PK_TYPE.ILP_T_POL_PREM_ALLOC_TABLE)
-    return BOOLEAN;
+  procedure validatePremAmount(pContractId    IN VARCHAR2,
+                               pPremAllocList IN ILP_PK_TYPE.ILP_T_POL_PREM_ALLOC_TABLE,
+                               pErrors        in out wtErrorList);
 
 END ILP_PK_TOPUP;
 /
@@ -92,21 +92,35 @@ create or replace package body ILP_PK_TOPUP is
   BEGIN
     RETURN pValue BETWEEN pMinVAlue AND pMaxValue;
   END;
-  function validatePremAmount(pContractId    IN VARCHAR2,
-                              pPremAllocList IN ILP_PK_TYPE.ILP_T_POL_PREM_ALLOC_TABLE)
-    return boolean is
-    lFunc     VARCHAR2(50) := 'ILP_PK_TOPUP.validatePremAmount';
-    sumAlloc  NUMBER := 0;
-    pMinValue INTEGER := 0;
-    pMaxValue INTEGER := 100;
-    lErrors   wtErrorList := wtErrorList();
+  procedure validateSumValue(sumAlloc IN NUMBER,
+                             pErrors  in out wtErrorList) is
+  begin
+    if sumAlloc > 100 or sumAlloc < 0 then
+      plw_pk_errors.addError(pErrors,
+                             'ERR',
+                             'Fund percent allocated in TUP must between 0-100.(Current:' ||
+                             sumAlloc || ')',
+                             NULL,
+                             NULL);
+    
+    end if;
+  
+  end;
+  procedure validateEachValue(pContractId    IN VARCHAR2,
+                              pPremAllocList IN ILP_PK_TYPE.ILP_T_POL_PREM_ALLOC_TABLE,
+                              sumAlloc       IN OUT NUMBER,
+                              pErrors        in out wtErrorList) is
+    lFunc VARCHAR2(50) := 'ILP_PK_TOPUP.validateEachValue';
+    pMinValue CONSTANT INTEGER := 0;
+    pMaxValue CONSTANT INTEGER := 100;
+  
   begin
   
     FOR i in 1 .. pPremAllocList.count LOOP
       IF (NOT isValueInRange(pPremAllocList(i).percent_invest,
                              pMinValue,
                              pMaxValue)) THEN
-        plw_pk_errors.addError(lErrors,
+        plw_pk_errors.addError(pErrors,
                                'ERR',
                                'Fund percent allocated in ' || pPremAllocList(i)
                                .premium_type ||
@@ -118,22 +132,20 @@ create or replace package body ILP_PK_TOPUP is
     
       sumAlloc := sumAlloc + pPremAllocList(i).percent_invest;
     END LOOP;
-    if sumAlloc > 100 or sumAlloc < 0 then
-      plw_pk_errors.addError(lErrors,
-                             'ERR',
-                             'Fund percent allocated in TUP must between 0-100.(Current:' ||
-                             sumAlloc || ')',
-                             NULL,
-                             NULL);   
-    
-    end if;
   
-    if lErrors.count > 0 then
-      return false;
-    end if;
-    return true;
+  end;
+
+  procedure validatePremAmount(pContractId    IN VARCHAR2,
+                               pPremAllocList IN ILP_PK_TYPE.ILP_T_POL_PREM_ALLOC_TABLE,
+                               pErrors        in out wtErrorList) is
+    lFunc    VARCHAR2(50) := 'ILP_PK_TOPUP.validatePremAmount';
+    sumAlloc NUMBER := 0;
   
-    return true;
+  begin
+    validateEachValue(pContractId, pPremAllocList, sumAlloc, pErrors);
+  
+    validateSumValue(sumAlloc, pErrors);
+  
   end;
 
   PROCEDURE savePremToPolDetail(pProcessId          in NUMBER,
@@ -328,11 +340,19 @@ create or replace package body ILP_PK_TOPUP is
   
     lContractId := getContractId(pProcessId);
   
-    lRequestId       := getRequestId(pProcessId);
+    lRequestId := getRequestId(pProcessId);
+  
     lPolicyDetailRow := getPolicyDetailRow(pProcessId, lContractId);
   
     lPolPremAllocList := getPolicyPremAllocList(pProcessId, lContractId);
-  
+    validatePremAmount(lContractId, lPolPremAllocList, lErrors);
+    IF (lErrors.COUNT > 0) THEN
+      az_pk0_general.logTrace(lFunc,
+                              lContractId,
+                              'Process id: ' ||
+                              '=> Found error in validation!!!');
+      return - 1;
+    END IF;
     savePremToPolDetail(pProcessId,
                         lContractId,
                         lRequestId,
@@ -343,6 +363,7 @@ create or replace package body ILP_PK_TOPUP is
                         lPolicyDetailRow.Deduct_Dividend_Fund,
                         pUpdateUser,
                         0);
+  
     savePolPremAlloc(pProcessId,
                      lContractId,
                      lPolicyDetailRow.Policy_No,

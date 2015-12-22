@@ -115,7 +115,7 @@ create or replace package body ILP_PK_TOPUP_UT is
   mFailCntValidPid     NUMBER := -4002;
   mFailCntID           NUMBER := -4003;
   mFailPolDParamId     NUMBER := -4005;
-
+  mFailReqID           NUMBER := -4006;
   mFailPolDParamVal VARCHAR2(4000) := '<?xml version="1.0" encoding="UTF-16"?>
 <ROWSET>
    <ROW>
@@ -211,18 +211,21 @@ create or replace package body ILP_PK_TOPUP_UT is
   
     EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM(PARAM_ID,PROCESS_ID,
     PARAM_NAME,PARAM_VALUE) values 
-    (9998, :mFailProcessId,''CONTRACT_ID'',:mFailCntId)'
+    (-9998, :mFailProcessId,''CONTRACT_ID'',:mFailCntId)'
       USING mFailProcessId, mFailCntId;
-  
+      EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM(PARAM_ID,PROCESS_ID,
+    PARAM_NAME,PARAM_VALUE) values 
+    (-9999, :mFailProcessId,''REQUEST_ID'',:mFailReqID)'
+      USING mFailProcessId, mFailReqID;
+      
     EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM(PARAM_ID,PROCESS_ID,
     PARAM_NAME,PARAM_VALUE) values 
-    (9999, :mFailProcessId,''POL_DETAIL'',:mFailPolDParamVal)'
+    (-10000, :mFailProcessId,''POL_DETAIL'',:mFailPolDParamVal)'
       USING mFailProcessId, mFailPolDParamVal;
     EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM(PARAM_ID,PROCESS_ID,
     PARAM_NAME,PARAM_VALUE) values 
-    (10000, :mFailProcessId,''POL_PREM_ALLOC'',:mFailPrmAllcVal)'
+    (-10001, :mFailProcessId,''POL_PREM_ALLOC'',:mFailPrmAllcVal)'
       USING mFailProcessId, mFailPrmAllcVal;
-   
   
     /* end mock case fail */
   end;
@@ -482,9 +485,21 @@ create or replace package body ILP_PK_TOPUP_UT is
       Assertion methods used : EQ
   ----------------------------------------------------- */
   PROCEDURE ut_saveTopup_fail IS
-  
+    policyDetailRow ILP_T_POL_DETAIL%ROWTYPE;
   BEGIN
+    utassert.isnotnull('It should found contract_id',
+                       'ilp_pk_topup.getContractId(' || mFailProcessId || ')');
+    utassert.isnotnull('It should found request_id',
+                       'ilp_pk_topup.getRequestId(' || mFailProcessId || ')');
+    policyDetailRow := ilp_pk_topup.getPolicyDetailRow(mFailProcessId,
+                                                       mFailCntID);
   
+    utassert.isnotnull('It should found policy_detail_row',
+                       'ilp_pk_topup.getPolicyDetailRow(' || mFailProcessId || ',' ||
+                       mFailCntID || ')');
+    utassert.isnotnull('It should found prem_allc',
+                       'ilp_pk_topup.getPolicyPremAllocList(' ||
+                       mFailProcessId || ',' || mFailCntID || ')');
     -- Test expect result -1 is fail.  
     utAssert.eq('It should return -1 when ilp_pk_topup.saveTopup was failed.',
                 ilp_pk_topup.saveTopup(mFailProcessId, mUpdateUser),
@@ -575,31 +590,38 @@ create or replace package body ILP_PK_TOPUP_UT is
   */
   procedure ut_validatePremiumAmount_succ is
     pPolPremAllocList ILP_PK_TYPE.ILP_T_POL_PREM_ALLOC_TABLE;
+    lErrors           wtErrorList := wtErrorList();
+    actual            boolean;
   begin
     -- get fake fail data for policy_premium_alloc.
     pPolPremAllocList := ilp_pk_topup.getPolicyPremAllocList(mSuccProcId,
                                                              mSuccCntIDParamVal);
+    ilp_pk_topup.validatePremAmount(mSuccCntIDParamVal,
+                                    
+                                    pPolPremAllocList,
+                                    lErrors);
+    actual := lErrors.count = 0;
     -- Test expect return true when validatePreAmount becuase sum of premium not over 100%.
     utassert.eq('It should validate all premiun amount should not over 100 percentage.',
-                ilp_pk_topup.validatePremAmount(mSuccCntIDParamVal,
-                                                pPolPremAllocList),
+                lErrors.count = 0,
                 true);
   end;
 
   procedure ut_validatePrmAmount_fail is
     pPolPremAllocList ILP_PK_TYPE.ILP_T_POL_PREM_ALLOC_TABLE;
+    lErrors           wtErrorList := wtErrorList();
   
-    expect boolean := false;
     actual boolean;
   begin
   
     pPolPremAllocList := ilp_pk_topup.getPolicyPremAllocList(mFailValidProcId,
                                                              mFailCntID);
+    ilp_pk_topup.validatePremAmount(mFailCntID, pPolPremAllocList, lErrors);
+    actual := lErrors.count > 0;
     -- Test expect return false when validatePreAmount becuase sum of premium over 100%.
     utassert.eq('It should validate all premiun amount should not over 100 percentage.',
-                ilp_pk_topup.validatePremAmount(mFailCntID,
-                                                pPolPremAllocList),
-                false);
+                actual,
+                true);
   
   end;
 
