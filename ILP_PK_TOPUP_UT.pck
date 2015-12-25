@@ -149,33 +149,49 @@ create or replace package body ILP_PK_TOPUP_UT is
         pol_detail              | true
         premium_alloc           | true
     */
-    execute immediate 'insert into ilp_t_process_subscribe 
-    (PROCESS_ID, FUNC_CODE, CREATE_USER, CREATE_DATE, START_DATE, FINISH_DATE, 
-    PROCESS_TYPE, PROCESS_STATUS, PROCESS_RESULT, EXECUTE_USER)
-    values (:mSuccProcId, ''SAVE_TOPUP'', ''asdfsaf'', 
-    sysdate, sysdate, sysdate, ''N'', ''N'', 1, ''asdfsaf'')'
-      USING mSuccProcId;
+    insert into ilp_t_process_subscribe
+      (PROCESS_ID,
+       FUNC_CODE,
+       CREATE_USER,
+       CREATE_DATE,
+       START_DATE,
+       FINISH_DATE,
+       PROCESS_TYPE,
+       PROCESS_STATUS,
+       PROCESS_RESULT,
+       EXECUTE_USER)
+    values
+      (mSuccProcId,
+       'SAVE_TOPUP',
+       'asdfsaf',
+       sysdate,
+       sysdate,
+       sysdate,
+       'N',
+       'N',
+       1,
+       'asdfsaf');
   
     -- success case set CONTRACT_ID
-    EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM(PARAM_ID,PROCESS_ID,
-    PARAM_NAME,PARAM_VALUE) values 
-    (:mSuccParamId, :mSuccProcId,''CONTRACT_ID'',:mckSuccessContractId)'
-      USING mSuccParamId, mSuccProcId, mckSuccessContractId;
+    insert into ILP_T_PROCESS_SUBSCRIBE_PARAM
+      (PARAM_ID, PROCESS_ID, PARAM_NAME, PARAM_VALUE)
+    values
+      (mSuccParamId, mSuccProcId, 'CONTRACT_ID', mckSuccessContractId);
   
-    EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM(PARAM_ID,PROCESS_ID,
-    PARAM_NAME,PARAM_VALUE) values 
-    (:mSuccParamId, :mSuccProcId,''REQUEST_ID'',:mSuccReqIDParamVal)'
-      USING mSuccReqParamId, mSuccProcId, mSuccReqIDParamVal;
+    insert into ILP_T_PROCESS_SUBSCRIBE_PARAM
+      (PARAM_ID, PROCESS_ID, PARAM_NAME, PARAM_VALUE)
+    values
+      (mSuccReqParamId, mSuccProcId, 'REQUEST_ID', mSuccReqIDParamVal);
   
-    EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM(PARAM_ID,PROCESS_ID,
-    PARAM_NAME,PARAM_VALUE) values 
-    (:mSuccPolDParamId, :mSuccProcId,''TOPUP_AMOUNT'',:mTopupAmount)'
-      USING mSuccPolDParamId, mSuccProcId, mTopupAmount;
+    insert into ILP_T_PROCESS_SUBSCRIBE_PARAM
+      (PARAM_ID, PROCESS_ID, PARAM_NAME, PARAM_VALUE)
+    values
+      (mSuccPolDParamId, mSuccProcId, 'TOPUP_AMOUNT', mTopupAmount);
   
-    EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM(PARAM_ID,PROCESS_ID,
-    PARAM_NAME,PARAM_VALUE) values 
-    (:mSuccPolPrmParamId, :mSuccProcId,''POL_PREM_ALLOC'',:mSuccPrmAllcVal)'
-      USING mSuccPolPrmParamId, mSuccProcId, mSuccPrmAllcVal;
+    insert into ILP_T_PROCESS_SUBSCRIBE_PARAM
+      (PARAM_ID, PROCESS_ID, PARAM_NAME, PARAM_VALUE)
+    values
+      (mSuccPolPrmParamId, mSuccProcId, 'POL_PREM_ALLOC', mSuccPrmAllcVal);
   
     /* INSERT INTO ocp_policy_bases
         (contract_id, policy_ref, Version_No, action_code)
@@ -219,107 +235,164 @@ create or replace package body ILP_PK_TOPUP_UT is
         contract_id                | fail
     
     */
-    execute immediate 'insert into ilp_t_process_subscribe 
-    (PROCESS_ID, FUNC_CODE, CREATE_USER, CREATE_DATE, START_DATE, FINISH_DATE, 
-    PROCESS_TYPE, PROCESS_STATUS, PROCESS_RESULT, EXECUTE_USER)
-    values (:mFailProcessId, ''SAVE_TOPUP'', ''asdfsaf'', 
-    sysdate, sysdate, sysdate, ''N'', ''N'', 1, ''asdfsaf'')'
-      USING mFailProcessId;
+    insert into ilp_t_process_subscribe
+      (PROCESS_ID,
+       FUNC_CODE,
+       CREATE_USER,
+       CREATE_DATE,
+       START_DATE,
+       FINISH_DATE,
+       PROCESS_TYPE,
+       PROCESS_STATUS,
+       PROCESS_RESULT,
+       EXECUTE_USER)
+    values
+      (mFailProcessId,
+       'SAVE_TOPUP',
+       'asdfsaf',
+       sysdate,
+       sysdate,
+       sysdate,
+       'N',
+       'N',
+       1,
+       'asdfsaf');
   
-    EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM(PARAM_ID,PROCESS_ID,
-    PARAM_NAME,PARAM_VALUE) values 
-    (-9998, :mFailProcessId,''CONTRACT_ID'',:mFailCntId)'
-      USING mFailProcessId, mFailCntId;
-    EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM(PARAM_ID,PROCESS_ID,
-    PARAM_NAME,PARAM_VALUE) values 
-    (-9999, :mFailProcessId,''REQUEST_ID'',:mFailReqID)'
-      USING mFailProcessId, mFailReqID;
+    insert into ILP_T_PROCESS_SUBSCRIBE_PARAM
+      (PARAM_ID, PROCESS_ID, PARAM_NAME, PARAM_VALUE)
+    values
+      (-9998, mFailProcessId, 'CONTRACT_ID', mFailCntId);
+    insert into ILP_T_PROCESS_SUBSCRIBE_PARAM
+      (PARAM_ID, PROCESS_ID, PARAM_NAME, PARAM_VALUE)
+    values
+      (-9999, mFailProcessId, 'REQUEST_ID', mFailReqID);
   
-    EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM(PARAM_ID,PROCESS_ID,
-    PARAM_NAME,PARAM_VALUE) values 
-    (-10000, :mFailProcessId,''TOPUP_AMOUNT'',:mFailTopAmtParamVal)'
-      USING mFailProcessId, mFailTopAmtParamVal;
-    EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM(PARAM_ID,PROCESS_ID,
-    PARAM_NAME,PARAM_VALUE) values 
-    (-10001, :mFailProcessId,''POL_PREM_ALLOC'',:mFailPrmAllcVal)'
-      USING mFailProcessId, mFailPrmAllcVal;
+    insert into ILP_T_PROCESS_SUBSCRIBE_PARAM
+      (PARAM_ID, PROCESS_ID, PARAM_NAME, PARAM_VALUE)
+    values
+      (-10000, mFailProcessId, 'TOPUP_AMOUNT', mFailTopAmtParamVal);
+    insert into ILP_T_PROCESS_SUBSCRIBE_PARAM
+      (PARAM_ID, PROCESS_ID, PARAM_NAME, PARAM_VALUE)
+    values
+      (-10001, mFailProcessId, 'POL_PREM_ALLOC', mFailPrmAllcVal);
   
     /* end mock case fail */
   end;
   procedure mock_notfound_case is
   begin
     -- set fail case CONTRACT_ID
-    EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM(PARAM_ID,PROCESS_ID,
-    PARAM_NAME,PARAM_VALUE) values 
-    (90021, :mNotFoundPremAllc,''CONTRACT_ID'',:mFailCntId)'
-      USING mPIDNotFoundPremAllc, mFailCntId;
+    insert into ILP_T_PROCESS_SUBSCRIBE_PARAM
+      (PARAM_ID, PROCESS_ID, PARAM_NAME, PARAM_VALUE)
+    values
+      (90021, mPIDNotFoundPremAllc, 'CONTRACT_ID', mFailCntId);
   
-    EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM
-    (PARAM_ID,PROCESS_ID,PARAM_NAME,PARAM_VALUE) values 
-    (90022, :mNotFoundPremAllc,''TOPUP_AMOUNT'',:mFailTopAmtParamVal)'
-      USING mPIDNotFoundPremAllc, mFailTopAmtParamVal;
-    execute immediate 'insert into ilp_t_process_subscribe 
-    (PROCESS_ID, FUNC_CODE, CREATE_USER, CREATE_DATE, START_DATE, FINISH_DATE, 
-    PROCESS_TYPE, PROCESS_STATUS, PROCESS_RESULT, EXECUTE_USER)
-    values (:mNotFoundPremAllc, ''SAVE_TOPUP'', ''asdfsaf'', 
-    sysdate, sysdate, sysdate, ''N'', ''N'', 1, ''asdfsaf'')'
-      USING mPIDNotFoundPremAllc;
+    insert into ILP_T_PROCESS_SUBSCRIBE_PARAM
+      (PARAM_ID, PROCESS_ID, PARAM_NAME, PARAM_VALUE)
+    values
+      (90022, mPIDNotFoundPremAllc, 'TOPUP_AMOUNT', mFailTopAmtParamVal);
+    insert into ilp_t_process_subscribe
+      (PROCESS_ID,
+       FUNC_CODE,
+       CREATE_USER,
+       CREATE_DATE,
+       START_DATE,
+       FINISH_DATE,
+       PROCESS_TYPE,
+       PROCESS_STATUS,
+       PROCESS_RESULT,
+       EXECUTE_USER)
+    values
+      (mPIDNotFoundPremAllc,
+       'SAVE_TOPUP',
+       'asdfsaf',
+       sysdate,
+       sysdate,
+       sysdate,
+       'N',
+       'N',
+       1,
+       'asdfsaf');
   end;
 
   procedure mock_validate_fail is
   
   begin
     -- set mock data before
-    execute immediate 'insert into ilp_t_process_subscribe 
-    (PROCESS_ID, FUNC_CODE, CREATE_USER, CREATE_DATE, START_DATE, FINISH_DATE, 
-    PROCESS_TYPE, PROCESS_STATUS, PROCESS_RESULT, EXECUTE_USER)
-    values (:mFailProcessId, ''SAVE_TOPUP'', ''asdfsaf'', 
-    sysdate, sysdate, sysdate, ''N'', ''N'', 1, ''asdfsaf'')'
-      USING mFailValidProcId;
-    EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM(PARAM_ID,PROCESS_ID,
-    PARAM_NAME,PARAM_VALUE) values 
-    (:mFailCntValidPid, :mFailValidProcId,''CONTRACT_ID'',:mFailCntID)'
-      USING mFailCntValidPid, mFailValidProcId, mFailCntID;
-    EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM(PARAM_ID,PROCESS_ID,
-    PARAM_NAME,PARAM_VALUE) values 
-    (:mFailPolDParamId, :mFailValidProcId,''TOPUP_AMOUNT'',:mFailTopAmtParamVal)'
-      USING mFailPolDParamId, mFailValidProcId, mFailTopAmtParamVal;
-    EXECUTE IMMEDIATE 'insert into ILP_T_PROCESS_SUBSCRIBE_PARAM(PARAM_ID,PROCESS_ID,
-    PARAM_NAME,PARAM_VALUE) values 
-    (:mFailPrmAllcValidPid, :mFailValidProcId,''POL_PREM_ALLOC'',:mFailPrmAllcVal)'
-      USING mFailPrmAllcValidPid, mFailValidProcId, mFailPrmAllcVal;
+    insert into ilp_t_process_subscribe
+      (PROCESS_ID,
+       FUNC_CODE,
+       CREATE_USER,
+       CREATE_DATE,
+       START_DATE,
+       FINISH_DATE,
+       PROCESS_TYPE,
+       PROCESS_STATUS,
+       PROCESS_RESULT,
+       EXECUTE_USER)
+    values
+      (mFailValidProcId,
+       'SAVE_TOPUP',
+       'asdfsaf',
+       sysdate,
+       sysdate,
+       sysdate,
+       'N',
+       'N',
+       1,
+       'asdfsaf');
+    insert into ILP_T_PROCESS_SUBSCRIBE_PARAM
+      (PARAM_ID, PROCESS_ID, PARAM_NAME, PARAM_VALUE)
+    values
+      (mFailCntValidPid, mFailValidProcId, 'CONTRACT_ID', mFailCntID);
+    insert into ILP_T_PROCESS_SUBSCRIBE_PARAM
+      (PARAM_ID, PROCESS_ID, PARAM_NAME, PARAM_VALUE)
+    values
+      (mFailPolDParamId,
+       mFailValidProcId,
+       'TOPUP_AMOUNT',
+       mFailTopAmtParamVal);
+    insert into ILP_T_PROCESS_SUBSCRIBE_PARAM
+      (PARAM_ID, PROCESS_ID, PARAM_NAME, PARAM_VALUE)
+    values
+      (mFailPrmAllcValidPid,
+       mFailValidProcId,
+       'POL_PREM_ALLOC',
+       mFailPrmAllcVal);
   end;
 
   procedure delete_all_mock is
   begin
     -- delete mock success case
-    EXECUTE IMMEDIATE 'delete from ILP_T_PROCESS_SUBSCRIBE_PARAM where PROCESS_ID = :mSuccProcId'
-      USING mSuccProcId;
-    EXECUTE IMMEDIATE 'delete from ILP_T_PROCESS_SUBSCRIBE where PROCESS_ID = :mSuccProcId'
-      USING mSuccProcId;
+    delete from ILP_T_PROCESS_SUBSCRIBE_PARAM
+     where PROCESS_ID = mSuccProcId;
+  
+    delete from ILP_T_PROCESS_SUBSCRIBE where PROCESS_ID = mSuccProcId;
   
     -- delete mock fail case
-    EXECUTE IMMEDIATE 'delete from ILP_T_PROCESS_SUBSCRIBE_PARAM where PROCESS_ID = :mFailProcessId'
-      USING mFailProcessId;
-    EXECUTE IMMEDIATE 'delete from ILP_T_PROCESS_SUBSCRIBE where PROCESS_ID = :mFailProcessId'
-      USING mFailProcessId;
-    -- delete case not found in prem_alloc
-    EXECUTE IMMEDIATE 'delete from ILP_T_PROCESS_SUBSCRIBE_PARAM where PROCESS_ID = :mNotFoundPremAllc'
-      USING mPIDNotFoundPremAllc;
-    EXECUTE IMMEDIATE 'delete from ILP_T_PROCESS_SUBSCRIBE where PROCESS_ID = :mNotFoundPremAllc'
-      USING mPIDNotFoundPremAllc;
-    -- delete mock data in ilp_t_pol_detail
-    execute IMMEDIATE 'delete from ILP_T_POL_DETAIL where PROCESS_ID = :mSuccProcId'
-      USING mSuccProcId;
-    -- clear mock data in ILP_T_POL_PREM_ALLOC
-    execute IMMEDIATE 'delete from ILP_T_POL_PREM_ALLOC where PROCESS_ID = :mSuccProcId'
-      USING mSuccProcId;
-    /* clear case validate fail */
-    EXECUTE IMMEDIATE 'delete from ILP_T_PROCESS_SUBSCRIBE_PARAM where PROCESS_ID = :mFailValidProcId'
-      USING mFailValidProcId;
+    delete from ILP_T_PROCESS_SUBSCRIBE_PARAM
+     where PROCESS_ID = mFailProcessId;
   
-    EXECUTE IMMEDIATE 'delete from ILP_T_PROCESS_SUBSCRIBE where PROCESS_ID = :mFailValidProcId'
-      USING mFailValidProcId;
+    delete from ILP_T_PROCESS_SUBSCRIBE where PROCESS_ID = mFailProcessId;
+  
+    -- delete case not found in prem_alloc
+    delete from ILP_T_PROCESS_SUBSCRIBE_PARAM
+     where PROCESS_ID = mPIDNotFoundPremAllc;
+  
+    delete from ILP_T_PROCESS_SUBSCRIBE
+     where PROCESS_ID = mPIDNotFoundPremAllc;
+  
+    -- delete mock data in ilp_t_pol_detail
+    delete from ILP_T_POL_DETAIL where PROCESS_ID = mSuccProcId;
+  
+    -- clear mock data in ILP_T_POL_PREM_ALLOC
+    delete from ILP_T_POL_PREM_ALLOC where PROCESS_ID = mSuccProcId;
+  
+    /* clear case validate fail */
+    delete from ILP_T_PROCESS_SUBSCRIBE_PARAM
+     where PROCESS_ID = mFailValidProcId;
+  
+    delete from ILP_T_PROCESS_SUBSCRIBE
+     where PROCESS_ID = mFailValidProcId;
   
     --DELETE ocp_policy_bases WHERE contract_id = mckSuccessContractId;
   
