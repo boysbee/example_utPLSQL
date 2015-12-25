@@ -302,7 +302,7 @@ CREATE OR REPLACE PACKAGE BODY ILP_PK_TOPUP IS
     FOR i IN pPolPremAllocList.FIRST .. pPolPremAllocList.LAST LOOP
       if pPolPremAllocList(i).percent_invest > 0 then
         resultFilter.extend;
-         resultFilter(i) := pPolPremAllocList(i);
+        resultFilter(i) := pPolPremAllocList(i);
       end if;
     END LOOP;
   
@@ -310,14 +310,14 @@ CREATE OR REPLACE PACKAGE BODY ILP_PK_TOPUP IS
   END;
   FUNCTION saveTopup(pProcessId IN NUMBER, pUpdateUser IN VARCHAR2)
     RETURN NUMBER IS
-    lContractId       VARCHAR2(200);
-    lRequestId        VARCHAR2(200);
-    lPolicyNo         VARCHAR2(20);
-    lTopupAmount      ILP_T_POL_DETAIL.topup_amount%TYPE;
-    lPolPremAllocList ILP_PK_TYPE.ILP_T_POL_PREM_ALLOC_TABLE;
+    lContractId             VARCHAR2(200);
+    lRequestId              VARCHAR2(200);
+    lPolicyNo               VARCHAR2(20);
+    lTopupAmount            ILP_T_POL_DETAIL.topup_amount%TYPE;
+    lPolPremAllocList       ILP_PK_TYPE.ILP_T_POL_PREM_ALLOC_TABLE;
     preparePolPremAllocList ILP_PK_TYPE.ILP_T_POL_PREM_ALLOC_TABLE;
-    lFunc             VARCHAR2(50) := lPackageName || '.saveTopup';
-    lErrors           wtErrorList := wtErrorList();
+    lFunc                   VARCHAR2(50) := lPackageName || '.saveTopup';
+    lErrors                 wtErrorList := wtErrorList();
   BEGIN
     az_pk0_general.logTrace(lFunc,
                             0,
