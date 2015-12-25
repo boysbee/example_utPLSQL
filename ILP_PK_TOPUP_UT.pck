@@ -621,7 +621,7 @@ create or replace package body ILP_PK_TOPUP_UT is
                           mckSuccessContractId || 'and request_id = ' ||
                           request_id,
                           3);
-    utAssert.eq('It should return 0 when saveTopup success.', result, 1);
+    utAssert.eq('It should return 0 when saveTopup success.', result, 0);
   END;
   /*  --------------------------------------------------
                    PROCEDURE saveTopup (
@@ -685,7 +685,7 @@ create or replace package body ILP_PK_TOPUP_UT is
     -- Test expect result -1 is fail.  
     utAssert.eq('It should return -1 when ilp_pk_topup.saveTopup was failed.',
                 ilp_pk_topup.saveTopup(mFailProcessId, mUpdateUser),
-                0);
+                1);
   END;
 
   /*  --------------------------------------------------
