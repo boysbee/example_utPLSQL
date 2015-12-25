@@ -41,6 +41,8 @@ create or replace package ILP_PK_TOPUP_UT is
   PROCEDURE ut_validatePremiumAmount_succ;
   -- test validate fail  premium amount;
   PROCEDURE ut_validatePrmAmount_fail;
+
+  PROCEDURE ut_remvInvestZeroPolPremAlloc;
   -- Call all test
   PROCEDURE test;
 
@@ -58,8 +60,9 @@ create or replace package body ILP_PK_TOPUP_UT is
   mSuccPolPrmParamId CONSTANT INTEGER := 10001;
   mSuccReqParamId    CONSTANT INTEGER := 10002;
   mTopupAmount       CONSTANT NUMBER := 123456;
-
-  cntIDParamName CONSTANT VARCHAR2(20) := 'CONTRACT_ID';
+  mRmvPrmParamId     CONSTANT INTEGER := 10003;
+  mRmvPrmAllProcId   CONSTANT INTEGER := 10004;
+  cntIDParamName     CONSTANT VARCHAR2(20) := 'CONTRACT_ID';
 
   mckSuccessContractId CONSTANT VARCHAR2(100) := '999999999';
   mckSuccessPolicyNo   CONSTANT VARCHAR2(100) := '9999997777';
@@ -98,6 +101,60 @@ create or replace package body ILP_PK_TOPUP_UT is
       <SEQ>3</SEQ>
       <PERCENT_INVEST>10</PERCENT_INVEST>
    </ROW>   
+</ROWSET>';
+
+  mRmvPrmAllcVal CONSTANT VARCHAR2(4000) := '<?xml version="1.0" encoding="UTF-16"?>
+<ROWSET>
+          <ROW>
+      <CONTRACT_ID>' ||
+                                            mckSuccessContractId ||
+                                            '</CONTRACT_ID>
+      <REQUEST_ID>99999999</REQUEST_ID>
+      <PREMIUM_TYPE>TOP</PREMIUM_TYPE>
+      <FUND_ID>2</FUND_ID>
+      <SEQ>1</SEQ>
+      <PERCENT_INVEST>70</PERCENT_INVEST>
+   </ROW>   
+   <ROW>
+      <CONTRACT_ID>' ||
+                                            mckSuccessContractId ||
+                                            '</CONTRACT_ID>
+      <REQUEST_ID>99999999</REQUEST_ID>
+      <PREMIUM_TYPE>TOP</PREMIUM_TYPE>
+      <FUND_ID>5</FUND_ID>
+      <SEQ>2</SEQ>
+      <PERCENT_INVEST>20</PERCENT_INVEST>
+   </ROW>
+   <ROW>
+      <CONTRACT_ID>' ||
+                                            mckSuccessContractId ||
+                                            '</CONTRACT_ID>
+      <REQUEST_ID>99999999</REQUEST_ID>
+      <PREMIUM_TYPE>TOP</PREMIUM_TYPE>
+      <FUND_ID>9</FUND_ID>
+      <SEQ>3</SEQ>
+      <PERCENT_INVEST>10</PERCENT_INVEST>
+   </ROW> 
+      <ROW>
+      <CONTRACT_ID>' ||
+                                            mckSuccessContractId ||
+                                            '</CONTRACT_ID>
+      <REQUEST_ID>99999999</REQUEST_ID>
+      <PREMIUM_TYPE>TOP</PREMIUM_TYPE>
+      <FUND_ID>7</FUND_ID>
+      <SEQ>4</SEQ>
+      <PERCENT_INVEST>0</PERCENT_INVEST>
+   </ROW>   
+   <ROW>
+      <CONTRACT_ID>' ||
+                                            mckSuccessContractId ||
+                                            '</CONTRACT_ID>
+      <REQUEST_ID>99999999</REQUEST_ID>
+      <PREMIUM_TYPE>TOP</PREMIUM_TYPE>
+      <FUND_ID>8</FUND_ID>
+      <SEQ>5</SEQ>
+      <PERCENT_INVEST>0</PERCENT_INVEST>
+   </ROW> 
 </ROWSET>';
 
   mFailProcessId   INTEGER := 9998;
@@ -199,6 +256,45 @@ create or replace package body ILP_PK_TOPUP_UT is
         (mckSuccessContractId, mckSuccessPolicyNo, 1, 'I');
     */
     /* end mock case success */
+  end;
+  procedure createMockRMVPremAll is
+  begin
+    insert into ilp_t_process_subscribe
+      (PROCESS_ID,
+       FUNC_CODE,
+       CREATE_USER,
+       CREATE_DATE,
+       START_DATE,
+       FINISH_DATE,
+       PROCESS_TYPE,
+       PROCESS_STATUS,
+       PROCESS_RESULT,
+       EXECUTE_USER)
+    values
+      (mRmvPrmAllProcId,
+       'SAVE_TOPUP',
+       'asdfsaf',
+       sysdate,
+       sysdate,
+       sysdate,
+       'N',
+       'N',
+       1,
+       'asdfsaf');
+  
+    insert into ILP_T_PROCESS_SUBSCRIBE_PARAM
+      (PARAM_ID, PROCESS_ID, PARAM_NAME, PARAM_VALUE)
+    values
+      (mRmvPrmParamId, mRmvPrmAllProcId, 'POL_PREM_ALLOC', mRmvPrmAllcVal);
+  end;
+  procedure deleteMockRMVPremAll is
+  begin
+    delete from ILP_T_PROCESS_SUBSCRIBE_PARAM
+     where process_id = mRmvPrmAllProcId
+       and param_id = mRmvPrmParamId;
+  
+    delete from ILP_T_PROCESS_SUBSCRIBE
+     where PROCESS_ID = mRmvPrmAllProcId;
   end;
   PROCEDURE createMockOcpData IS
   BEGIN
@@ -397,6 +493,7 @@ create or replace package body ILP_PK_TOPUP_UT is
     --DELETE ocp_policy_bases WHERE contract_id = mckSuccessContractId;
   
     deleteMockOCPData;
+    deleteMockRMVPremAll;
     /* end clear case validate fail */
     commit;
   EXCEPTION
@@ -415,6 +512,7 @@ create or replace package body ILP_PK_TOPUP_UT is
     mock_fail_case;
     mock_validate_fail;
     createMockOcpData;
+    createMockRMVPremAll;
   END;
 
   /*  --------------------------------------------------
@@ -703,6 +801,22 @@ create or replace package body ILP_PK_TOPUP_UT is
                 actual,
                 true);
   
+  end;
+
+  PROCEDURE ut_remvInvestZeroPolPremAlloc is
+    pPolPremAllocList       ILP_PK_TYPE.ILP_T_POL_PREM_ALLOC_TABLE;
+    resultPPolPremAllocList ILP_PK_TYPE.ILP_T_POL_PREM_ALLOC_TABLE;
+  begin
+    pPolPremAllocList := ilp_pk_topup.getPolicyPremAllocList(mRmvPrmAllProcId,
+                                                             mFailCntID);
+  
+    utassert.eq('It should be list size of premium alloc before filter.',
+                pPolPremAllocList.count,
+                5);
+    resultPPolPremAllocList := ilp_pk_topup.remvInvestZeroPolPremAllocList(pPolPremAllocList);
+    utassert.eq('It should remove data in list when percent_invest not more than 0.',
+                resultPPolPremAllocList.count,
+                3);
   end;
 
   PROCEDURE test IS
